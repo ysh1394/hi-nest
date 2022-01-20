@@ -8,8 +8,6 @@ import {
   Patch,
   Post,
   Query,
-  Req,
-  Res,
 } from '@nestjs/common';
 import { Movie } from './entities/movie.entity';
 import { CreateMovieDto } from './dto/create-movie.dto';
@@ -20,7 +18,7 @@ export class MoviesController {
   constructor(private readonly moviesService: MoviesService) {}
 
   @Get()
-  getAll(): Movie[] {
+  getAll(): Promise<Movie[]> {
     return this.moviesService.getAll();
   }
 
@@ -31,21 +29,21 @@ export class MoviesController {
   // }
 
   @Get('/search') // Get이 동적 Get보다 밑에 있으면 /:id 중 하나로 읽으므로 위에서 선언해 줄 것
-  search(@Query('year') year: string, @Query('date') date: string) {
-    return `year : ${year}, date: ${date}`;
+  async search(@Query() query: object): Promise<Movie[]> {
+    return this.moviesService.search(query);
   }
+  // @Get('/search') // Get이 동적 Get보다 밑에 있으면 /:id 중 하나로 읽으므로 위에서 선언해 줄 것
+  // search(@Query('year') year: number) {
+  //   return this.moviesService.search(year);
+  // }
 
   @Get('/:id') // @Get에서의 동적 url과 @Param의 인자는 같아야함
-  getOne(@Param('id') movieId: number): Movie {
-    console.log(movieId);
+  getOne(@Param('id') movieId: number): Promise<Movie> {
     return this.moviesService.getOne(movieId);
-
-    // return this.MoviesService.getOne();
   }
 
   @Post()
   create(@Body() movieData: CreateMovieDto) {
-    console.log('movieData >> ', movieData);
     return this.moviesService.create(movieData);
   }
 
@@ -59,6 +57,5 @@ export class MoviesController {
   @Patch('/:id')
   patch(@Param('id') movieId: number, @Body() updateData: UpdateMovieDto) {
     return this.moviesService.update(movieId, updateData);
-    // return { updatedMovie: movieId, ...updateData };
   }
 }

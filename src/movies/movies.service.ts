@@ -1,37 +1,63 @@
-import { Get, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import { CreateMovieDto } from './dto/create-movie.dto';
 import { UpdateMovieDto } from './dto/update-movie.dto';
 import { Movie } from './entities/movie.entity';
+import { MovieRepository } from './repository/movie.repository';
 
 @Injectable()
 export class MoviesService {
-  private movies: Movie[] = [];
+  constructor(
+    @InjectRepository(MovieRepository)
+    private movies: MovieRepository,
+  ) {}
 
-  getAll(): Movie[] {
-    return this.movies;
+  async getAll(): Promise<Movie[]> {
+    return this.movies.find();
   }
 
-  getOne(id: number): Movie {
-    const movie = this.movies.find((movie) => movie.id === id);
-    if (!movie) {
+  async search(query: object): Promise<Movie[]> {
+    const allData = await this.getAll();
+    // const filter = await allData.
+    console.log('year >>>', query);
+
+    return allData;
+  }
+
+  async getOne(id: number): Promise<Movie> {
+    const detailData = await this.movies.findOne(id);
+    if (!detailData) {
       throw new NotFoundException(`Movie with ID ${id} not found`);
     }
-    return movie;
+    return detailData;
   }
 
-  create(data: CreateMovieDto) {
-    this.movies.push({ id: this.movies.length + 1, ...data });
+  async create(data: CreateMovieDto): Promise<Movie> {
+    const allData = await this.getAll();
+    const newData = await this.movies.create({
+      id: allData.length + 1,
+      ...data,
+    });
+    await this.movies.save(newData);
+    return newData;
   }
 
-  deleteOne(id: number): boolean {
-    this.getOne(id); // id가 올바르지 않으면 throw error를 하기 위해서
-    this.movies = this.movies.filter((movie) => movie.id !== id);
-    return true;
+  async deleteOne(id: number): Promise<string> {
+    try {
+      const data = await this.getOne(id);
+      await this.movies.remove(data);
+      return `remove id ${id}`;
+    } catch (e) {
+      throw new NotFoundException(e.message);
+    }
   }
 
-  update(id: number, updateData: UpdateMovieDto) {
-    const movie = this.getOne(id);
-    this.deleteOne(id);
-    this.movies.push({ ...movie, ...updateData });
+  async update(id: number, updateData: UpdateMovieDto): Promise<string> {
+    try {
+      await this.movies.update(id, { ...updateData });
+      return `update id ${id}`;
+    } catch (e) {
+      throw new NotFoundException(e.message);
+    }
   }
 }
